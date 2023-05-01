@@ -2,38 +2,65 @@ import * as fs from 'fs';
 import * as path from 'path';
 import axios from 'axios';
 const { Configuration, OpenAIApi } = require("openai");
-// Load the OpenAI API key from a separate file
 const apiKey = fs.readFileSync('openai-key.txt', 'utf-8').trim();
 const configuration = new Configuration({
     apiKey: apiKey,
 });
 const openai = new OpenAIApi(configuration);
 
+
 // Define the podcast feed URL and the output directory
-const podcastFeedUrl = 'https://feeds.feedburner.com/ChaseOaksChurch';
 const outputDir = 'transcripts';
 
 
 // Define a helper function to sanitize filenames
 function sanitizeFilename(filename: string): string {
-    return filename.replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').substring(0, 32);
+    return filename.replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').substring(0, 64);
 }
 
 // Transcribe audio
-async function transcribeAudio(filename: string) {
+async function transcribeAudio(filename: string, ffmpegPath?: string) {
+    const compressedFilename = path.join(path.dirname(filename), 'compressed_' + path.basename(filename));
+    var fileToProcess = null;
+    if (ffmpegPath === undefined) {
+        fileToProcess = filename;
+    } else {
+        await compressAudio(filename, compressedFilename, ffmpegPath);
+        fileToProcess = compressedFilename;
+    }
+
     const transcript = await openai.createTranscription(
-        fs.createReadStream(filename),
-        "whisper-1"
+        fs.createReadStream(fileToProcess),
+        'whisper-1'
     );
+
+    // Delete the compressed file
+    fs.unlinkSync(compressedFilename);
+
     return transcript.data.text;
 }
 
+// Compress audio to fit within the 10MB limit
+function compressAudio(inputFile: string, outputFile: string, ffmpegPath?: string): Promise<void> {
+    // Ensure FFmpeg is installed on your system and provide the path to the FFmpeg executable
+    // ffmpeg.setFfmpegPath('/opt/homebrew/bin/ffmpeg');
+    const ffmpeg = require('fluent-ffmpeg');
+    ffmpeg.setFfmpegPath(ffmpegPath);
+    return new Promise((resolve, reject) => {
+        ffmpeg(inputFile)
+            .audioBitrate('32k') // Adjust the bitrate as needed to achieve desired quality and size
+            .output(outputFile)
+            .on('end', resolve)
+            .on('error', reject)
+            .run();
+    });
+}
 // Define the main async function to transcribe the latest episode of the podcast
-export async function transcribeLatestEpisode(podcastFeedUrl: string): Promise<string> {
+export async function transcribeLatestEpisode(podcastFeedUrl: string, ffmpegPath?: string): Promise<string> {
     // Fetch the podcast feed and extract the latest episode URL and title
     const feedResponse = await axios.get(podcastFeedUrl);
     const episodeUrlRegex = /<enclosure url="([^"]+)"/g;
-    const titleRegex = /<title>([^<]+)<\/title>/g;
+    const titleRegex = /<itunes:title>([^<]+)<\/itunes:title>/g;
     const episodeUrls: string[] = [];
     const episodeTitles: string[] = [];
     let match;
@@ -62,7 +89,7 @@ export async function transcribeLatestEpisode(podcastFeedUrl: string): Promise<s
         audioResponse.data.on('error', reject);
     });
 
-    const transcriptText = await transcribeAudio(tempFilePath);
+    const transcriptText = await transcribeAudio(tempFilePath, ffmpegPath);
 
 // Save the transcript to a file in the output directory
     const transcriptFilename = sanitizeFilename(latestEpisodeTitle).replace(/\s+/g, '_'); // Replace spaces with underscores

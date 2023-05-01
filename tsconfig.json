@@ -4,6 +4,9 @@
     "module": "commonjs",
     "strict": false,
     "esModuleInterop": true,
-    "resolveJsonModule": true
-  }
+    "resolveJsonModule": true,
+    "outDir": "dist"
+  },
+  "include": ["*.ts"],
+  "exclude": ["node_modules", "dist"]
 }

@@ -19,7 +19,7 @@ function readTranscript(): string {
 }
 
 // Define a function to generate a takeaway from the transcript using GPT
-export async function generateTakeaway(transcript: string, personalInfo: string): Promise<string> {
+export async function generateTakeaway(transcript: string, personalInfo: string, apiKey: string): Promise<string> {
     const summarizeModel = new OpenAI({ temperature: 0, modelName: "gpt-3.5-turbo", openAIApiKey: apiKey  });
     const textSplitter = new RecursiveCharacterTextSplitter({ chunkSize: 700 });
     const docs = await textSplitter.createDocuments([transcript]);

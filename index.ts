@@ -1,0 +1,1 @@
+export { fetchAndSummarize } from './fetchAndSummarize';
