@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import axios from 'axios';
+import { Readable } from 'stream';
 const { Configuration, OpenAIApi } = require("openai");
 import { requestUrl } from 'obsidian';
 
@@ -55,9 +55,7 @@ function compressAudio(inputFile: string, outputFile: string, ffmpegPath?: strin
     });
 }
 
-// Define the main async function to transcribe the latest episode of the podcast
-export async function transcribeLatestEpisode(podcastFeedUrl: string, apiKey: string, ffmpegPath?: string): Promise<string> {
-    // Fetch the podcast feed and extract the latest episode URL and title
+async function getLatestEpisodeInfo(podcastFeedUrl: string) {
     const feedResponse = await requestUrl({ url: podcastFeedUrl });
     const feedText = feedResponse.text;
     const episodeUrlRegex = /<enclosure url="([^"]+)"/g;
@@ -71,72 +69,54 @@ export async function transcribeLatestEpisode(podcastFeedUrl: string, apiKey: st
     while ((match = titleRegex.exec(feedText)) !== null) {
         episodeTitles.push(match[1]);
     }
-    const latestEpisodeUrl = episodeUrls[0];
-    const latestEpisodeTitle = episodeTitles[0];
+    return { latestEpisodeUrl: episodeUrls[0], latestEpisodeTitle: episodeTitles[0] };
+}
+
+async function downloadAndTranscribeEpisode(latestEpisodeUrl: string, apiKey: string, ffmpegPath?: string) {
+    const audioResponse = await requestUrl({ url: latestEpisodeUrl });
+    const arrayBufferToStream = (buffer: ArrayBuffer) => {
+        const readable = new Readable();
+        readable._read = () => {};
+        readable.push(Buffer.from(buffer));
+        readable.push(null);
+        return readable;
+    };
+    const tempFilePath = path.join(outputDir, 'temp.mp3');
+    const audioStream = arrayBufferToStream(audioResponse.arrayBuffer);
+    audioStream.pipe(fs.createWriteStream(tempFilePath));
+    await new Promise<void>((resolve, reject) => {
+        audioStream.on('end', resolve);
+        audioStream.on('error', reject);
+    });
+
+    const transcriptText = await transcribeAudio(tempFilePath, apiKey, ffmpegPath);
+    fs.unlinkSync(tempFilePath);
+
+    return transcriptText;
+}
+
+export async function transcribeLatestEpisode(podcastFeedUrl: string, apiKey: string, ffmpegPath?: string): Promise<string> {
+    const { latestEpisodeUrl, latestEpisodeTitle } = await getLatestEpisodeInfo(podcastFeedUrl);
 
     // Create the output directory if it doesn't exist yet
     if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir);
     }
 
-    // Download the latest episode audio to a temporary file
-    const audioResponse = await axios.get(latestEpisodeUrl, {
-        responseType: 'stream',
-    });
-    const tempFilePath = path.join(outputDir, 'temp.mp3');
-    audioResponse.data.pipe(fs.createWriteStream(tempFilePath));
-    await new Promise<void>((resolve, reject) => {
-        audioResponse.data.on('end', resolve);
-        audioResponse.data.on('error', reject);
-    });
+    const transcriptText = await downloadAndTranscribeEpisode(latestEpisodeUrl, apiKey, ffmpegPath);
 
-    const transcriptText = await transcribeAudio(tempFilePath, apiKey, ffmpegPath);
-
-// Save the transcript to a file in the output directory
+    // Save the transcript to a file in the output directory
     const transcriptFilename = sanitizeFilename(latestEpisodeTitle).replace(/\s+/g, '_'); // Replace spaces with underscores
     const transcriptFilePath = path.join(outputDir, `${transcriptFilename}.txt`);
     fs.writeFileSync(transcriptFilePath, transcriptText);
-
-    // Delete the temporary file
-    fs.unlinkSync(tempFilePath);
 
     console.log(`Transcript saved to ${transcriptFilePath}`);
     return transcriptFilePath;
 }
 
-// Define the main async function to transcribe the latest episode of the podcast
 export async function transcribeLatestEpisodeNoFiles(podcastFeedUrl: string, apiKey: string, ffmpegPath?: string): Promise<string> {
-    // Fetch the podcast feed and extract the latest episode URL and title
-    const feedResponse = await requestUrl({ url: podcastFeedUrl });
-    const feedText = feedResponse.text;
-    const episodeUrlRegex = /<enclosure url="([^"]+)"/g;
-    const titleRegex = /<itunes:title>([^<]+)<\/itunes:title>/g;
-    const episodeUrls: string[] = [];
-    const episodeTitles: string[] = [];
-    let match;
-    while ((match = episodeUrlRegex.exec(feedText)) !== null) {
-        episodeUrls.push(match[1]);
-    }
-    while ((match = titleRegex.exec(feedText)) !== null) {
-        episodeTitles.push(match[1]);
-    }
-    const latestEpisodeUrl = episodeUrls[0];
-    const latestEpisodeTitle = episodeTitles[0];
+    const { latestEpisodeUrl } = await getLatestEpisodeInfo(podcastFeedUrl);
 
-    // Download the latest episode audio to a temporary file
-    const audioResponse = await axios.get(latestEpisodeUrl, {
-        responseType: 'stream',
-    });
-    const tempFilePath = path.join(outputDir, 'temp.mp3');
-    audioResponse.data.pipe(fs.createWriteStream(tempFilePath));
-    await new Promise<void>((resolve, reject) => {
-        audioResponse.data.on('end', resolve);
-        audioResponse.data.on('error', reject);
-    });
-
-    const transcriptText = await transcribeAudio(tempFilePath, apiKey, ffmpegPath);
-
-// Save the transcript to a file in the output directory
-    fs.unlinkSync(tempFilePath);
+    const transcriptText = await downloadAndTranscribeEpisode(latestEpisodeUrl, apiKey, ffmpegPath);
     return transcriptText;
 }
