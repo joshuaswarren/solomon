@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import axios from 'axios';
 const { Configuration, OpenAIApi } = require("openai");
-
+import { requestUrl } from 'Obsidian';
 
 // Define the podcast feed URL and the output directory
 const outputDir = 'transcripts';
@@ -58,8 +58,8 @@ function compressAudio(inputFile: string, outputFile: string, ffmpegPath?: strin
 // Define the main async function to transcribe the latest episode of the podcast
 export async function transcribeLatestEpisode(podcastFeedUrl: string, apiKey: string, ffmpegPath?: string): Promise<string> {
     // Fetch the podcast feed and extract the latest episode URL and title
-    const feedResponse = await fetch(podcastFeedUrl, { mode: 'no-cors' });
-    const feedText = await feedResponse.text();
+    const feedResponse = await requestUrl({ url: podcastFeedUrl });
+    const feedText = feedResponse.text;
     const episodeUrlRegex = /<enclosure url="([^"]+)"/g;
     const titleRegex = /<itunes:title>([^<]+)<\/itunes:title>/g;
     const episodeUrls: string[] = [];
@@ -107,8 +107,8 @@ export async function transcribeLatestEpisode(podcastFeedUrl: string, apiKey: st
 // Define the main async function to transcribe the latest episode of the podcast
 export async function transcribeLatestEpisodeNoFiles(podcastFeedUrl: string, apiKey: string, ffmpegPath?: string): Promise<string> {
     // Fetch the podcast feed and extract the latest episode URL and title
-    const feedResponse = await fetch(podcastFeedUrl, { mode: 'no-cors' });
-    const feedText = await feedResponse.text();
+    const feedResponse = await requestUrl({ url: podcastFeedUrl });
+    const feedText = feedResponse.text;
     const episodeUrlRegex = /<enclosure url="([^"]+)"/g;
     const titleRegex = /<itunes:title>([^<]+)<\/itunes:title>/g;
     const episodeUrls: string[] = [];

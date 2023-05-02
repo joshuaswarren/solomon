@@ -1,6 +1,6 @@
 {
   "name": "podcast-takeaways",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A system to download the most recent episode of a plugin, transcribe it with the OpenAI Whisper API and then use GPT to determine one takeaway to apply from the episode.",
   "main": "index.js",
   "scripts": {
@@ -23,7 +23,8 @@
     "fluent-ffmpeg": "^2.1.2",
     "langchain": "^0.0.66",
     "multer": "^1.4.5-lts.1",
-    "openai": "^3.2.1"
+    "openai": "^3.2.1",
+    "obsidian": "^0.16.3"
   },
   "devDependencies": {
     "@types/fluent-ffmpeg": "^2.1.21",
