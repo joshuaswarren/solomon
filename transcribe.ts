@@ -24,8 +24,16 @@ async function transcribeAudio(filename: string, apiKey: string, ffmpegPath?: st
     if (ffmpegPath === undefined) {
         fileToProcess = filename;
     } else {
-        await compressAudio(filename, compressedFilename, ffmpegPath);
+        try {
+            await compressAudio(filename, compressedFilename, ffmpegPath);
+        } catch (err) {
+            throw new Error(`Error compressing audio file: ${err}`);
+        }
         fileToProcess = compressedFilename;
+    }
+
+    if (!fs.existsSync(fileToProcess)) {
+        throw new Error(`The audio file '${fileToProcess}' does not exist.`);
     }
 
     const transcript = await openai.createTranscription(
@@ -41,8 +49,6 @@ async function transcribeAudio(filename: string, apiKey: string, ffmpegPath?: st
 
 // Compress audio to fit within the 10MB limit
 function compressAudio(inputFile: string, outputFile: string, ffmpegPath?: string): Promise<void> {
-    // Ensure FFmpeg is installed on your system and provide the path to the FFmpeg executable
-    // ffmpeg.setFfmpegPath('/opt/homebrew/bin/ffmpeg');
     const ffmpeg = require('fluent-ffmpeg');
     ffmpeg.setFfmpegPath(ffmpegPath);
     return new Promise((resolve, reject) => {
