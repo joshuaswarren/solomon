@@ -36,6 +36,12 @@ async function transcribeAudio(filename: string, apiKey: string, ffmpegPath?: st
         throw new Error(`The audio file '${fileToProcess}' does not exist.`);
     }
 
+    // Log file details before transcription
+    const stats = fs.statSync(fileToProcess);
+    const fileSizeInBytes = stats.size;
+    const fileSizeInMegabytes = fileSizeInBytes / (1024 * 1024);
+    console.log(`Transcribing file '${fileToProcess}' with size: ${fileSizeInMegabytes.toFixed(2)} MB`);
+
     const transcript = await openai.createTranscription(
         fs.createReadStream(fileToProcess),
         'whisper-1'
