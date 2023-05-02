@@ -54,19 +54,21 @@ function compressAudio(inputFile: string, outputFile: string, ffmpegPath?: strin
             .run();
     });
 }
+
 // Define the main async function to transcribe the latest episode of the podcast
 export async function transcribeLatestEpisode(podcastFeedUrl: string, apiKey: string, ffmpegPath?: string): Promise<string> {
     // Fetch the podcast feed and extract the latest episode URL and title
-    const feedResponse = await axios.get(podcastFeedUrl);
+    const feedResponse = await fetch(podcastFeedUrl, { mode: 'no-cors' });
+    const feedText = await feedResponse.text();
     const episodeUrlRegex = /<enclosure url="([^"]+)"/g;
     const titleRegex = /<itunes:title>([^<]+)<\/itunes:title>/g;
     const episodeUrls: string[] = [];
     const episodeTitles: string[] = [];
     let match;
-    while ((match = episodeUrlRegex.exec(feedResponse.data)) !== null) {
+    while ((match = episodeUrlRegex.exec(feedText)) !== null) {
         episodeUrls.push(match[1]);
     }
-    while ((match = titleRegex.exec(feedResponse.data)) !== null) {
+    while ((match = titleRegex.exec(feedText)) !== null) {
         episodeTitles.push(match[1]);
     }
     const latestEpisodeUrl = episodeUrls[0];
