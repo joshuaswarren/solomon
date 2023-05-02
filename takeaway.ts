@@ -1,9 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Load the OpenAI API key from a separate file
-const apiKey = fs.readFileSync(path.join(__dirname, 'openai-key.txt'), 'utf-8').trim();
-const personalInfo = fs.readFileSync(path.join(__dirname, 'personal-info.txt'), 'utf-8').trim();
 const { OpenAI } = require("langchain/llms/openai");
 import { PromptTemplate } from "langchain/prompts";
 import { LLMChain } from "langchain/chains";
