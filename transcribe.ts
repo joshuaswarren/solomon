@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import axios from 'axios';
 const { Configuration, OpenAIApi } = require("openai");
-import { requestUrl } from 'Obsidian';
+import { requestUrl } from 'obsidian';
 
 // Define the podcast feed URL and the output directory
 const outputDir = 'transcripts';
