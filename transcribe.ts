@@ -2,11 +2,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import axios from 'axios';
 const { Configuration, OpenAIApi } = require("openai");
-const apiKey = fs.readFileSync('openai-key.txt', 'utf-8').trim();
-const configuration = new Configuration({
-    apiKey: apiKey,
-});
-const openai = new OpenAIApi(configuration);
 
 
 // Define the podcast feed URL and the output directory
@@ -19,8 +14,12 @@ function sanitizeFilename(filename: string): string {
 }
 
 // Transcribe audio
-async function transcribeAudio(filename: string, ffmpegPath?: string) {
+async function transcribeAudio(filename: string, apiKey: string, ffmpegPath?: string) {
     const compressedFilename = path.join(path.dirname(filename), 'compressed_' + path.basename(filename));
+    const configuration = new Configuration({
+        apiKey: apiKey,
+    });
+    const openai = new OpenAIApi(configuration);
     var fileToProcess = null;
     if (ffmpegPath === undefined) {
         fileToProcess = filename;
@@ -56,7 +55,7 @@ function compressAudio(inputFile: string, outputFile: string, ffmpegPath?: strin
     });
 }
 // Define the main async function to transcribe the latest episode of the podcast
-export async function transcribeLatestEpisode(podcastFeedUrl: string, ffmpegPath?: string): Promise<string> {
+export async function transcribeLatestEpisode(podcastFeedUrl: string, apiKey: string, ffmpegPath?: string): Promise<string> {
     // Fetch the podcast feed and extract the latest episode URL and title
     const feedResponse = await axios.get(podcastFeedUrl);
     const episodeUrlRegex = /<enclosure url="([^"]+)"/g;
@@ -89,7 +88,7 @@ export async function transcribeLatestEpisode(podcastFeedUrl: string, ffmpegPath
         audioResponse.data.on('error', reject);
     });
 
-    const transcriptText = await transcribeAudio(tempFilePath, ffmpegPath);
+    const transcriptText = await transcribeAudio(tempFilePath, apiKey, ffmpegPath);
 
 // Save the transcript to a file in the output directory
     const transcriptFilename = sanitizeFilename(latestEpisodeTitle).replace(/\s+/g, '_'); // Replace spaces with underscores
