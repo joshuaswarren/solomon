@@ -4,6 +4,7 @@ import * as os from 'os';
 import { Readable } from 'stream';
 const { Configuration, OpenAIApi } = require("openai");
 import { requestUrl } from 'obsidian';
+import FormData from 'form-data';
 
 const outputDir = 'transcripts';
 const tempDir = os.tmpdir();
@@ -11,6 +12,34 @@ const tempDir = os.tmpdir();
 // Define a helper function to sanitize filenames
 function sanitizeFilename(filename: string): string {
     return filename.replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').substring(0, 64);
+}
+
+async function createTranscriptionWithObsidian(fileToProcess: string, apiKey: string) {
+    const formData = new FormData();
+    formData.append('file', fs.createReadStream(fileToProcess));
+
+    // Get the boundary from the form-data object
+    const boundary = formData.getBoundary();
+
+    // Convert form-data stream to ArrayBuffer
+    const bodyStream = new Readable().wrap(formData);
+    const chunks = [];
+    for await (const chunk of bodyStream) {
+        chunks.push(chunk);
+    }
+    const body = new Uint8Array(Buffer.concat(chunks)).buffer;
+
+    const response = await requestUrl({
+        url: 'https://api.openai.com/v1/audio/transcriptions',
+        method: 'POST',
+        contentType: `multipart/form-data; boundary=${boundary}`,
+        body: body,
+        headers: {
+            'Authorization': `Bearer ${apiKey}`,
+        },
+    });
+
+    return JSON.parse(response.text).text;
 }
 
 // Transcribe audio
@@ -43,6 +72,9 @@ async function transcribeAudio(filename: string, apiKey: string, ffmpegPath?: st
     console.log(`Transcribing file '${fileToProcess}' with size: ${fileSizeInMegabytes.toFixed(2)} MB`);
     const fileExtension = path.extname(fileToProcess);
     console.log(`File extension: ${fileExtension}`);
+    const transcript = await createTranscriptionWithObsidian(fileToProcess, apiKey);
+    return transcript;
+    /*
 
     try {
         const transcript = await openai.createTranscription(
@@ -66,6 +98,7 @@ async function transcribeAudio(filename: string, apiKey: string, ffmpegPath?: st
         }
         throw error;
     }
+     */
 }
 
 // Compress audio to fit within the 10MB limit
