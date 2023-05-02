@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { transcribeLatestEpisode } from './transcribe';
+import {transcribeLatestEpisode, transcribeLatestEpisodeNoFiles} from './transcribe';
 import { generateTakeaway } from './takeaway';
 
 export async function fetchAndSummarize(apiKey: string, personalInfo: string, podcastFeedUrl: string, ffmpegPath?: string): Promise<string> {
@@ -7,10 +7,16 @@ export async function fetchAndSummarize(apiKey: string, personalInfo: string, po
     if (fs.existsSync(transcriptFilePath)) {
         const transcript = fs.readFileSync(transcriptFilePath, 'utf-8');
         const takeaway = await generateTakeaway(transcript, personalInfo, apiKey);
-        return takeaway;
         console.log(`Takeaway: ${takeaway}`);
+        return takeaway;
     } else {
         console.log('Episode already transcribed. Skipping transcription.');
         return null;
     }
+}
+
+export async function fetchAndSummarizeNoFiles(apiKey: string, personalInfo: string, podcastFeedUrl: string, ffmpegPath?: string): Promise<string> {
+    const transcript = await transcribeLatestEpisodeNoFiles(podcastFeedUrl, apiKey, ffmpegPath);
+    const takeaway = await generateTakeaway(transcript, personalInfo, apiKey);
+    return takeaway;
 }

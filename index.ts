@@ -1,1 +1,1 @@
-export { fetchAndSummarize } from './fetchAndSummarize';
+export { fetchAndSummarize, fetchAndSummarizeNoFiles } from './fetchAndSummarize';
