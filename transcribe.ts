@@ -1,12 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import { Readable } from 'stream';
 const { Configuration, OpenAIApi } = require("openai");
 import { requestUrl } from 'obsidian';
 
-// Define the podcast feed URL and the output directory
 const outputDir = 'transcripts';
-
+const tempDir = os.tmpdir();
 
 // Define a helper function to sanitize filenames
 function sanitizeFilename(filename: string): string {
@@ -81,7 +81,7 @@ async function downloadAndTranscribeEpisode(latestEpisodeUrl: string, apiKey: st
         readable.push(null);
         return readable;
     };
-    const tempFilePath = path.join(outputDir, 'temp.mp3');
+    const tempFilePath = path.join(tempDir, 'temp.mp3');
     const audioStream = arrayBufferToStream(audioResponse.arrayBuffer);
     audioStream.pipe(fs.createWriteStream(tempFilePath));
     await new Promise<void>((resolve, reject) => {
