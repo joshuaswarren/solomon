@@ -3,6 +3,7 @@ import {transcribeLatestEpisode, transcribeLatestEpisodeNoFiles} from './transcr
 import { generateTakeaway } from './takeaway';
 
 export async function fetchAndSummarize(apiKey: string, personalInfo: string, podcastFeedUrl: string, storeFiles: boolean, ffmpegPath?: string): Promise<string> {
+    apiKey = apiKey.trim();
     if (storeFiles === false ) {
       return fetchAndSummarizeNoFiles(apiKey, personalInfo, podcastFeedUrl, ffmpegPath);
     }
@@ -19,6 +20,7 @@ export async function fetchAndSummarize(apiKey: string, personalInfo: string, po
 }
 
 export async function fetchAndSummarizeNoFiles(apiKey: string, personalInfo: string, podcastFeedUrl: string, ffmpegPath?: string): Promise<string> {
+    apiKey = apiKey.trim();
     const transcript = await transcribeLatestEpisodeNoFiles(podcastFeedUrl, apiKey, ffmpegPath);
     const takeaway = await generateTakeaway(transcript, personalInfo, apiKey);
     return takeaway;

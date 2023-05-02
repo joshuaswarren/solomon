@@ -43,7 +43,6 @@ async function transcribeAudio(filename: string, apiKey: string, ffmpegPath?: st
     console.log(`Transcribing file '${fileToProcess}' with size: ${fileSizeInMegabytes.toFixed(2)} MB`);
     const fileExtension = path.extname(fileToProcess);
     console.log(`File extension: ${fileExtension}`);
-    console.log(`OpenAI API Key: ${apiKey}`);
 
     try {
         const transcript = await openai.createTranscription(
@@ -55,9 +54,15 @@ async function transcribeAudio(filename: string, apiKey: string, ffmpegPath?: st
 
         return transcript.data.text;
     } catch (error) {
-        if (error.response && error.response.headers) {
-            console.log("Rate limit remaining:", error.response.headers["x-ratelimit-remaining"]);
-            console.log("Rate limit reset:", error.response.headers["x-ratelimit-reset"]);
+        if (error.response) {
+            console.log("Error response status:", error.response.status);
+            console.log("Error response data:", error.response.data);
+            if (error.response.headers) {
+                console.log("Rate limit remaining:", error.response.headers["x-ratelimit-remaining"]);
+                console.log("Rate limit reset:", error.response.headers["x-ratelimit-reset"]);
+            }
+        } else {
+            console.log("Error:", error.message);
         }
         throw error;
     }
