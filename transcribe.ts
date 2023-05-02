@@ -41,16 +41,26 @@ async function transcribeAudio(filename: string, apiKey: string, ffmpegPath?: st
     const fileSizeInBytes = stats.size;
     const fileSizeInMegabytes = fileSizeInBytes / (1024 * 1024);
     console.log(`Transcribing file '${fileToProcess}' with size: ${fileSizeInMegabytes.toFixed(2)} MB`);
+    const fileExtension = path.extname(fileToProcess);
+    console.log(`File extension: ${fileExtension}`);
+    console.log(`OpenAI API Key: ${apiKey}`);
 
-    const transcript = await openai.createTranscription(
-        fs.createReadStream(fileToProcess),
-        'whisper-1'
-    );
+    try {
+        const transcript = await openai.createTranscription(
+            fs.createReadStream(fileToProcess),
+            'whisper-1'
+        );
+        // Delete the compressed file
+        fs.unlinkSync(compressedFilename);
 
-    // Delete the compressed file
-    fs.unlinkSync(compressedFilename);
-
-    return transcript.data.text;
+        return transcript.data.text;
+    } catch (error) {
+        if (error.response && error.response.headers) {
+            console.log("Rate limit remaining:", error.response.headers["x-ratelimit-remaining"]);
+            console.log("Rate limit reset:", error.response.headers["x-ratelimit-reset"]);
+        }
+        throw error;
+    }
 }
 
 // Compress audio to fit within the 10MB limit
